@@ -1,4 +1,3 @@
-# 1 "rt/rtconi.F90"
 !***********************************************************************
 !                        Version 1:  05/92, PFN                        *
 !                                                                      *
@@ -12,7 +11,7 @@
 !                                                                      *
 !   Local:   relerr - relative errors                                  *
 !                                                                      *
-!***********************************************************************
+!*********************************************************************** 
    subroutine rtconi(maxEnergyDensityError, Phi)
 
    use kind_mod
@@ -34,8 +33,6 @@
    real(adqt), intent(in)    :: Phi(Size%ngr,Size%ncornr) 
 
 !  Local
-
-   integer, dimension(1) :: zoneEnergyMax 
 
    integer    :: my_node, ig, zoneMaxError, nodeID, nzones
    integer    :: c, c0, nCorner, zone, ngr, bdyTest
@@ -62,8 +59,8 @@
 
    intensityControl => getIterationControl(IterControls,"intensity")
 
-!  Find the zone-average energy density
-
+!  Find the zone-average energy density 
+!$omp parallel do private(zone,nCorner,c0,c,sum,ig)
    do zone=1,nzones
      Z => getZoneData(Geom, zone)
 
@@ -85,8 +82,7 @@
 
 !  Find an energy threshold for convergence tests
 
-   zoneEnergyMax  = maxloc( EnergyDensity(:) )
-   EnergyMax      = EnergyDensity(zoneEnergyMax(1))
+   EnergyMax = maxval( EnergyDensity(:) )
 
    call MPIAllReduceT(EnergyMax, "max", MPI_COMM_WORLD)
 
@@ -94,7 +90,7 @@
 
 !  Compute relative errors in the total energy density in
 !  a zone; eliminate zones from consideration if their zonal
-!  energy is less than a threshold
+!  energy is less than a threshold 
 
    zoneMaxError          = 0
    maxEnergyDensityError = zero

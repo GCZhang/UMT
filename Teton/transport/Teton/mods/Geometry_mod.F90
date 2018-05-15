@@ -1,10 +1,10 @@
-# 1 "mods/Geometry_mod.F90"
 ! Geometry Modules:  geometry and connectivity information used by Sn
                                                                                  
 module Geometry_mod 
 
   use kind_mod
   use ZoneData_mod
+  use cudafor
 
   private
 
@@ -31,6 +31,15 @@ module Geometry_mod
      integer, pointer :: nfpc(:)              ! nfpc(ncornr)
 
      type(ZoneData), pointer :: ZData(:)      ! zone data pointers
+     type(ZoneData), device, allocatable :: d_ZData(:)
+
+     type(GPU_ZoneData), pinned, allocatable :: GPU_ZData(:)
+     type(GPU_ZoneData), device, allocatable :: d_GPU_ZData(:)
+
+     type(ZoneData_SoA), allocatable :: ZDataSoA ! is this host version really needed?
+     type(ZoneData_SoA), device, allocatable :: d_ZDataSoA
+
+     logical :: d_ZData_uptodate
 
   end type Geometry
 
@@ -56,6 +65,7 @@ contains
 
   subroutine Geometry_ctor(self)
 
+    use, intrinsic :: iso_c_binding
     use Size_mod
 
     implicit none
@@ -63,6 +73,10 @@ contains
 !   Passed variables
 
     type(Geometry),  intent(inout) :: self
+
+!   Local variables
+
+    integer :: istat
 
 !!$    allocate( self % px(Size%ndim,Size%npnts) )
     allocate( self % volc(Size%ncornr) )
@@ -87,7 +101,23 @@ contains
 !   Pointers
 
     allocate( self % ZData(Size%nzones) )
+    allocate( self % d_ZData(Size%nzones) ) 
 
+    allocate( self % GPU_ZData(Size%nzones) )
+    allocate( self % d_GPU_ZData(Size%nzones) )
+    
+    allocate( self % ZDataSoA )
+    allocate( self % d_ZDataSoA )
+
+    ! Pin the array pointed to by ZData:
+    istat = cudaHostRegister(C_LOC(self%ZData(1)), sizeof(self%ZData), cudaHostRegisterMapped)
+
+    ! is host version of ZDataSoA really needed?
+    call constructZones_SoA(self % ZDataSoA)
+    istat = cudaMemcpyAsync(C_DEVLOC(self%d_ZDataSoA), C_LOC(self%ZDataSoA), sizeof(self%ZDataSoA), 0)
+    ! still not up to date, because ZDataSoA now just points to correct places, but those places have not been
+    ! popluated with data yet.
+    self % d_ZData_uptodate = .false.
 
     return
                                                                                              
@@ -120,6 +150,7 @@ contains
 
   subroutine Geometry_dtor(self)
 
+    use, intrinsic :: iso_c_binding
     use Size_mod
 
     implicit none
@@ -127,6 +158,10 @@ contains
 !   Passed variables
 
     type(Geometry),  intent(inout) :: self
+
+!   Locals
+
+    integer :: istat
 
 
 !!$    deallocate( self % px )
@@ -149,6 +184,17 @@ contains
     deallocate( self % ZoneToSrc )
     deallocate( self % nfpc )
 
+!   Pointers
+
+    !! should probably deallocate these here; not doing so
+    !! because self%ZData was not deallocated in original code
+
+    !istat = cudaHostUnregister(C_LOC(self % ZData(1)))
+    !deallocate( self % ZData )
+    !deallocate( self % d_ZData )
+    !destructZones_SoA(self%ZDataSoA)
+    !deallocate( self % ZDataSoA )
+    !deallocate( self % d_ZDataSoA )
 
     return
 

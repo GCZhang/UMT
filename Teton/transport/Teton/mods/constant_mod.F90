@@ -1,4 +1,3 @@
-# 1 "mods/constant_mod.F90"
 ! Constant Module:  various commonly used constants.
 
 module constant_mod

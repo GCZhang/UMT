@@ -1,9 +1,8 @@
-# 1 "snac/GaussLegendreLobattoWgts.F90"
 !***********************************************************************
 !                        Version 1:  07/03, PFN                        *
 !                                                                      *
 !   GaussLegendreLobattoWgts - Given the points (xJac) of the          *
-!                              Gauss-Legendre-Lobatto quadrature it    *
+!                              Gauss-Legendre-Lobatto quadrature it    *  
 !                              returns the weights.                    *
 !                                                                      *
 !        -1 = xJac[0] < xJac[1] < ... < xJac[N-1] < xJac[N] = 1        *
@@ -40,7 +39,7 @@
 
    real(adqt) :: Plm(0:2*n+1) 
 
-!  Weight for the pole
+!  Weight for the pole 
 
    weight0   = two/(real(2*n+1,adqt)*real(2*n+2,adqt))
    wgtJac(0) = weight0

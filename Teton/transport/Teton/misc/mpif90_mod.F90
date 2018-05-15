@@ -1,16 +1,8 @@
-# 1 "misc/mpif90_mod.F90"
 module mpif90_mod
 
-# 1 "./include/assert.h" 1 
+#include "assert.h"
 !  Assertion checking include file for TETON
 
-# 7
-
-
-
-
-
-# 4 "misc/mpif90_mod.F90" 2 
 use kind_mod
 use mpi_param_mod
 
@@ -18,22 +10,21 @@ use mpi_param_mod
 !                       Version 1.1: 02/99, MRZ
 !                       Version 1.0: 05/92, PFN
 !-----------------------------------------------------------------------
-! 1
-!   This class wraps 1 functions.  This facilitates turning off 1.
+! MPI
+!   This class wraps MPI functions.  This facilitates turning off MPI.
 !
 !-----------------------------------------------------------------------
 ! v1.0: Original implementation
-! v1.1: 1 functions wrapped in a Fortran90 class
+! v1.1: MPI functions wrapped in a Fortran90 class
 !=======================================================================
 
 private
 
-# 1 "misc/mpif90.if" 1 
 !=======================================================================
 !                       Version 1.0: 03/99, MRZ
 !-----------------------------------------------------------------------
-! 1 Interface File
-!   This defines the interface to the 1 class.
+! MPI Interface File
+!   This defines the interface to the MPI class.
 !
 !-----------------------------------------------------------------------
 ! v1.0: Original implementation
@@ -48,7 +39,7 @@ private
 !=======================================================================
 ! MPIAllReduceT(buffer, op, comm)
 !
-!   Performs an 1 reduction on all nodes in the communicator.
+!   Performs an MPI reduction on all nodes in the communicator.
 !-----------------------------------------------------------------------
 !   buffer   data buffer (integer or double precision)
 !               input:  data to be reduced
@@ -58,7 +49,7 @@ private
 !               "sum"...sum reduction
 !               "min"...minimization reduction
 !               "max"...maximization reduction
-!   comm     1 communicator
+!   comm     MPI communicator
 !=======================================================================
   interface MPIAllReduceT
     module procedure mpi_MPIAllReduceT_r, &
@@ -70,9 +61,9 @@ private
 !=======================================================================
 ! MPIBarrier(comm)
 !
-!   Performs an 1 barrier on all nodes in the communicator
+!   Performs an MPI barrier on all nodes in the communicator
 !-----------------------------------------------------------------------
-!   comm   1 communicator
+!   comm   MPI communicator
 !=======================================================================
   interface MPIBarrierT
     module procedure mpi_MPIBarrierT
@@ -83,7 +74,7 @@ private
 !
 !   Returns the rank of the calling process in the communicator
 !-----------------------------------------------------------------------
-!   comm   1 communicator
+!   comm   MPI communicator
 !   rank   processor rank
 !=======================================================================
   interface MPICommRank
@@ -95,7 +86,7 @@ private
 !
 !   Returns the size of the group associated with the communicator
 !-----------------------------------------------------------------------
-!   comm     1 communicator
+!   comm     MPI communicator
 !   size     group size
 !=======================================================================
   interface MPICommSize
@@ -105,7 +96,7 @@ private
 !=======================================================================
 ! MPIFinalize()
 !
-!   Performs an 1 finalize operation
+!   Performs an MPI finalize operation
 !=======================================================================
   interface MPIFinalize
     module procedure mpi_MPIFinalize
@@ -114,12 +105,12 @@ private
 !=======================================================================
 ! MPIGather(sendBuf, recBuf, root, comm)
 !
-!   Performs an 1 gather operation
+!   Performs an MPI gather operation
 !-----------------------------------------------------------------------
 !   sendBuf  send buffer (double precision)
 !   recvBuf  receive buffer (double precision)
 !   root     node to which gather is performed
-!   comm     1 communicator
+!   comm     MPI communicator
 !=======================================================================
   interface MPIGather
     module procedure mpi_MPIGather_r_, &
@@ -129,7 +120,7 @@ private
 !=======================================================================
 ! MPIInit()
 !
-!   Performs an 1 initialization
+!   Performs an MPI initialization
 !=======================================================================
   interface MPIInit
     module procedure mpi_MPIInit
@@ -140,7 +131,7 @@ private
 !
 !   Returns the rank of the calling process in the communicator
 !-----------------------------------------------------------------------
-!   comm        1 communicator
+!   comm        MPI communicator
 !   getMPIRank  processor rank
 !=======================================================================
   interface getMPIRankT
@@ -152,13 +143,12 @@ private
 !
 !   Returns the size of the group associated with the communicator
 !-----------------------------------------------------------------------
-!   comm        1 communicator
+!   comm        MPI communicator
 !   getMPISize  group size
 !=======================================================================
   interface getMPISizeT
     module procedure mpi_getMPISizeT
   end interface
-# 22 "misc/mpif90_mod.F90" 2 
 
 contains
 
@@ -168,13 +158,13 @@ contains
 
   subroutine mpi_MPIAllReduceT_r(recvBuf,mpiOp,comm)
 
-!    This subroutine performs an 1 All Reduce operation with a
+!    This subroutine performs an MPI All Reduce operation with a
 !    barrier.  The data to be broadcast, a floating point scalar, is
 !    passed in as recvBuf; the reduced data is returned in recvBuf.
 !
 !      recvBuf  send and receive buffer
-!      mpiOp    1 operation
-!      comm     1 communicator
+!      mpiOp    MPI operation
+!      comm     MPI communicator
 
 !    variable declarations
      implicit none
@@ -199,9 +189,9 @@ contains
 !      copy the send buffer into temporary storage
        sendBuf = recvBuf
 
-!      1 Barrier is implicit for MPI_Allreduce
+!      MPI Barrier is implicit for MPI_Allreduce
 
-!      1 Reduction
+!      MPI Reduction
        length = 1
        select case (mpiOp)
        case ("min")
@@ -230,13 +220,13 @@ contains
 !-----------------------------------------------------------------------
   subroutine mpi_MPIAllReduceT_r_(recvBuf,mpiOp,comm)
 
-!    This subroutine performs an 1 All Reduce operation with a
+!    This subroutine performs an MPI All Reduce operation with a
 !    barrier.  The data to be broadcast, a floating point array, is
 !    passed in as recvBuf; the reduced data is returned in recvBuf.
 !
 !      recvBuf  send and receive buffer
-!      mpiOp    1 operation
-!      comm     1 communicator
+!      mpiOp    MPI operation
+!      comm     MPI communicator
 
 !    variable declarations
      implicit none
@@ -264,9 +254,9 @@ contains
 !      copy the send buffer into temporary storage
        sendBuf(:) = recvBuf(:)
 
-!      1 Barrier is implicit for MPI_Allreduce
+!      MPI Barrier is implicit for MPI_Allreduce
 
-!      1 Reduction
+!      MPI Reduction
        length = size(recvBuf(:))
        select case (mpiOp)
        case ("min")
@@ -299,13 +289,13 @@ contains
 !-----------------------------------------------------------------------
   subroutine mpi_MPIAllReduceT_i(recvBuf,mpiOp,comm)
 
-!    This subroutine performs an 1 All Reduce operation with a
+!    This subroutine performs an MPI All Reduce operation with a
 !    barrier.  The data to be broadcast, an integer scalar, is
 !    passed in as recvBuf; the reduced data is returned in recvBuf.
 !
 !      recvBuf  send and receive buffer
-!      mpiOp    1 operation
-!      comm     1 communicator
+!      mpiOp    MPI operation
+!      comm     MPI communicator
 
 !    variable declarations
      implicit none
@@ -330,9 +320,9 @@ contains
 !      copy the send buffer into temporary storage
        sendBuf = recvBuf
 
-!      1 Barrier is implicit for MPI_Allreduce
+!      MPI Barrier is implicit for MPI_Allreduce
 
-!      1 Reduction
+!      MPI Reduction
        length = 1
        select case (mpiOp)
        case ("min")
@@ -361,13 +351,13 @@ contains
 !-----------------------------------------------------------------------
   subroutine mpi_MPIAllReduceT_i_(recvBuf,mpiOp,comm)
 
-!    This subroutine performs an 1 All Reduce operation with a
+!    This subroutine performs an MPI All Reduce operation with a
 !    barrier.  The data to be broadcast, an integer array, is
 !    passed in as recvBuf; the reduced data is returned in recvBuf.
 !
 !      recvBuf  send and receive buffer
-!      mpiOp    1 operation
-!      comm     1 communicator
+!      mpiOp    MPI operation
+!      comm     MPI communicator
 
 !    variable declarations
      implicit none
@@ -395,9 +385,9 @@ contains
 !      copy the send buffer into temporary storage
        sendBuf(:) = recvBuf(:)
 
-!      1 Barrier is implicit for MPI_Allreduce
+!      MPI Barrier is implicit for MPI_Allreduce
 
-!      1 Reduction
+!      MPI Reduction
        length = size(recvBuf(:))
        select case (mpiOp)
        case ("min")
@@ -433,8 +423,8 @@ contains
 
   subroutine mpi_MPIBarrierT(comm)
 
-!    This subroutine performs an 1 Barrier operation.
-!      comm   1 communicator
+!    This subroutine performs an MPI Barrier operation.
+!      comm   MPI communicator
 
 !    variable declarations
      implicit none
@@ -446,7 +436,7 @@ contains
      integer :: ierror
 
 
-!    1 Barrier
+!    MPI Barrier
      call MPI_Barrier(comm, ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Barrier Failed")
@@ -465,7 +455,7 @@ contains
 !    This subroutine determines the rank of the calling process in the
 !    communicator.
 !      rank   processor rank
-!      comm   1 communicator
+!      comm   MPI communicator
 
 !    variable declarations
      implicit none
@@ -478,12 +468,11 @@ contains
      integer :: ierror
 
 
-!    1 Communicator Rank
+!    MPI Communicator Rank
      call MPI_Comm_rank(comm, rank, ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Barrier Failed")
      endif
-# 348
 
 
      return
@@ -497,7 +486,7 @@ contains
 
 !    This subroutine determines the size of the group associated with
 !    the communicator.
-!      comm       1 communicator
+!      comm       MPI communicator
 !      commSize   communicator size
 
 !    variable declarations
@@ -511,12 +500,11 @@ contains
      integer :: ierror
 
 
-!    1 Communicator Size
+!    MPI Communicator Size
      call MPI_Comm_size(comm, commSize, ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Barrier Failed")
      endif
-# 382
 
 
      return
@@ -528,7 +516,7 @@ contains
 
   subroutine mpi_MPIFinalize()
 
-!    This subroutine performs an 1 Finalize operation.
+!    This subroutine performs an MPI Finalize operation.
 
 !    variable declarations
      implicit none
@@ -537,7 +525,7 @@ contains
      integer :: ierror
 
 
-!    1 Finalize
+!    MPI Finalize
      call MPI_Finalize(ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Finalize Failed")
@@ -553,14 +541,14 @@ contains
 
   subroutine mpi_MPIGather_r_(sendBuf,recvBuf,gatherNode,comm)
 
-!    This subroutine performs an 1 Gather operation.  The data to
+!    This subroutine performs an MPI Gather operation.  The data to
 !    be broadcast, a floating point array, is passed in as send Buf;
 !    the gathered data is returned in recvBuf.
 !
 !      sendBuf      send buffer
 !      recvBuf      receive buffer
 !      gatherNode   node to which all data is gathered
-!      comm         1 communicator
+!      comm         MPI communicator
 
 !    variable declarations
      implicit none
@@ -586,10 +574,10 @@ contains
         
      endif
 
-!    1 Barrier before performing the gather
+!    MPI Barrier before performing the gather
      call MPIBarrierT(comm)
 
-!    1 Gather
+!    MPI Gather
      sendCount = size(sendBuf,1)
      recvCount = sendCount
 
@@ -604,7 +592,7 @@ contains
 !       on non-gather nodes, the receiver buffer is dereferenced due
 !       to a Fortran90 copy-in/copy-out operation.  To avoid
 !       dereferencing a null pointer, pass a dummy (allocated) receive
-!       buffer, which 1 ignores.
+!       buffer, which MPI ignores.
 
         call MPI_Gather(sendBuf, sendCount, MPI_REAL8, &
                         recvBufDum, recvCount, MPI_REAL8, &
@@ -622,14 +610,14 @@ contains
 !-----------------------------------------------------------------------
   subroutine mpi_MPIGather_r__(sendBuf,recvBuf,gatherNode,comm)
 
-!    This subroutine performs an 1 Gather operation.  The data to
+!    This subroutine performs an MPI Gather operation.  The data to
 !    be broadcast, a floating point array, is passed in as send Buf;
 !    the gathered data is returned in recvBuf.
 !
 !      sendBuf      send buffer
 !      recvBuf      receive buffer
 !      gatherNode   node to which all data is gathered
-!      comm         1 communicator
+!      comm         MPI communicator
 
 !    variable declarations
      implicit none
@@ -656,10 +644,10 @@ contains
         
      endif
 
-!    1 Barrier before performing the gather
+!    MPI Barrier before performing the gather
      call MPIBarrierT(comm)
 
-!    1 Gather
+!    MPI Gather
      sendCount = size(sendBuf,1)*size(sendBuf,2)
      recvCount = sendCount
 
@@ -695,7 +683,7 @@ contains
 
   subroutine mpi_MPIInit()
 
-!    This subroutine performs an 1 Initialization operation.
+!    This subroutine performs an MPI Initialization operation.
 
 !    variable declarations
      implicit none
@@ -704,7 +692,7 @@ contains
      integer :: ierror
 
 
-!    1 Init
+!    MPI Init
      call MPI_Init(ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Init Failed")
@@ -723,7 +711,7 @@ contains
 !    This subroutine determines the rank of the calling process in the
 !    communicator.
 !
-!      comm      1 communicator
+!      comm      MPI communicator
 !      MPIRank   processor rank
 
 !    variable declarations
@@ -737,12 +725,11 @@ contains
      integer :: ierror
 
 
-!    1 Communicator Rank
+!    MPI Communicator Rank
      call MPI_Comm_rank(comm, MPIrank, ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Barrier Failed")
      endif
-# 609
 
 
      return
@@ -756,7 +743,7 @@ contains
 
 !    This subroutine determines the size of the group associated with
 !    the communicator.
-!      comm      1 communicator
+!      comm      MPI communicator
 !      MPISize   communicator size
 
 !    variable declarations
@@ -770,12 +757,11 @@ contains
      integer :: ierror
 
 
-!    1 Communicator Size
+!    MPI Communicator Size
      call MPI_Comm_size(comm, MPISize, ierror)
      if (ierror /= MPI_SUCCESS) then
         call f90fatal("MPI Barrier Failed")
      endif
-# 643
 
 
      return

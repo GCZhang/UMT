@@ -1,8 +1,7 @@
-# 1 "aux/ConstructSize.F90"
 !***********************************************************************
 !                        Version 0:  02/02, MKN                        *
 !                                                                      *
-!   ConstructSize - Builds the F90 module containing problem           *
+!   ConstructSize - Builds the F90 module containing problem           * 
 !                   parameters.                                        *
 !                                                                      *
 !***********************************************************************

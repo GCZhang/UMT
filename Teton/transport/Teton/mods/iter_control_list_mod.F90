@@ -1,16 +1,6 @@
-# 1 "mods/iter_control_list_mod.F90"
 module iter_control_list_mod
 
-# 1 "./include/assert.h" 1 
-!  Assertion checking include file for TETON
-
-# 7
-
-
-
-
-
-# 4 "mods/iter_control_list_mod.F90" 2 
+#include "assert.h"
       use kind_mod
       use io_mod
       use iter_control_mod
@@ -127,9 +117,9 @@ contains
      self % nIterCon = nIterCon
 
 !    assertions
-     
-     
-     
+     ensure(self%nIterCon>0, "Invalid iter control list")
+     ensure(self%nIterCon<=self%maxIterCon, "Invalid iter control list")
+     ensure(associated(self%iControls), "Invalid iter control list")
 
      return
   end subroutine iter_control_list_ctor
@@ -191,9 +181,9 @@ contains
      self % nIterCon = 0
 
 !    assertions
-     
-     
-     
+     ensure(.not.associated(self%names), "Invalid destruct")
+     ensure(.not.associated(self%iControls), "Invalid destruct")
+     ensure(self%nIterCon==0, "Invalid destruct")
 
      return
   end subroutine iter_control_list_dtor
@@ -217,8 +207,8 @@ contains
      nIterCon = self % nIterCon
 
 !    assertions
-     
-     
+     ensure(nIterCon==self%nIterCon, "Improper data access")
+     ensure(nIterCon>=0, "Improper data access")
 
      return
   end function iter_control_list_get_nIterCon
@@ -242,9 +232,9 @@ contains
      integer :: iIterCon
 
 !    assertions
-     
-     
-     
+     require(associated(self%names), "Invalid iter control list")
+     require(associated(self%iControls), "Invalid iter control list")
+     require(any(iteration==self%names(:)), "Invalid iteration name")
 
 !    loop through the list to the requested iteration control
      ListLoop: do iIterCon = 1, self%nIterCon
@@ -255,7 +245,7 @@ contains
      enddo ListLoop
 
 !    assertions
-     
+     ensure(associated(iControl), "Invalid iter control")
 
      return
   end function iter_control_list_get_iCon

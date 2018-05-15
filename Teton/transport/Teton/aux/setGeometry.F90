@@ -1,4 +1,3 @@
-# 1 "aux/setGeometry.F90"
 !***********************************************************************
 !                        Version 1:  02/06, PFN                        *
 !                                                                      *
@@ -31,11 +30,11 @@
 
    real(adqt), target, intent(in) :: px(Size%ndim,Size%npnts)
 
-!  Local
+!  Local 
 
    integer :: i, ib, nBoundary, nBdyElem, b0
 
-!  Constants
+!  Constants 
 
    nBoundary = getNumberOfBoundaries(RadBoundary)
 
@@ -60,6 +59,10 @@
      do ib=1,nBdyElem
        Bdy% BdyToC(ib) = BdyToC(b0+ib)
      enddo
+
+     ! NEEDS TO BE DONE ASYNC!
+     ! propagate this to the device version:
+     Bdy%d_BdyToC = Bdy%BdyToC
 
    enddo
 

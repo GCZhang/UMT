@@ -1,4 +1,3 @@
-# 1 "aux/setZone.F90"
 !***********************************************************************
 !                        Version 1:  02/06, PFN                        *
 !                                                                      *
@@ -27,7 +26,7 @@
    integer,    intent(in)    :: Connect(3,Size%maxcf,Size%maxCorner)
    integer,    intent(in)    :: nfpc(Size%ncornr)
 
-!  Local
+!  Local 
 
    integer :: nCorner, ncfaces
 
@@ -40,6 +39,8 @@
 
    call constructZone( Z, nCorner, ncfaces, corner0, numFaces, Connect )
 
+   ! Host version of GPU_ZData structure is used for allocating
+   call constructGPUZone(Geom%GPU_ZData(zoneID), nCorner, ncfaces, corner0, numFaces, Connect )
 
    return
    end subroutine setZone 

@@ -1,8 +1,7 @@
-# 1 "rt/UpdateMaterialCoupling.F90"
 !***********************************************************************
 !                        Version 1:  04/2008, PFN                      *
 !                                                                      *
-!   UpdateMaterialCoupling:                                            *
+!   UpdateMaterialCoupling:                                            * 
 !                                                                      *
 !   Calculates electron temperature and energy change. Updates         *
 !   sources and GTA opacities.                                         *
@@ -75,8 +74,13 @@
 !          etac(ic)   = sigdbdt/(Rho*Cve + sigdbdt)
 !        enddo
 !
-!      endif
+!      endif 
 
+
+!YKT: add OpenMP
+!$omp parallel do private(Z,nCorner,c0,Rho,Cve,SMatEff,Siga, c, &
+!$omp &  ic,iter,tecOld,temp,t3,t4,tempInv,gnukt,x,ex,dbex,frac,Planck, &
+!$omp &  sum,dBdT,Chi,Eta,one_Eta,EmissionRate,NetEmisAbsRate,deltaE,error,echeck,srcmat)
    ZoneLoop: do zone=1,Size%nzones
 
      Z          => getZoneData(Geom, zone)
@@ -88,6 +92,9 @@
      SMatEff    = Mat%SMatEff(zone)
      Siga(:)    = Mat%siga(:,zone)
 
+!!YKT: add OpenMP
+!!$omp parallel do private(ic,iter,tecOld,temp,t3,t4,tempInv,gnukt,x,ex,dbex,frac,Planck, &
+!!$omp &  sum,dBdT,Chi,Eta,one_Eta,EmissionRate,NetEmisAbsRate,deltaE,error,echeck,srcmat)
      CornerLoop: do c=1,nCorner
 
        ic   = c0 + c

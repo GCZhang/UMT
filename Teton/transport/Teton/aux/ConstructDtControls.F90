@@ -1,8 +1,7 @@
-# 1 "aux/ConstructDtControls.F90"
 !***********************************************************************
 !                        Version 0:  02/02, MKN                        *
 !                                                                      *
-!   CINTERFACE  -   Wrapper for modules that can be called from C++    *
+!   CINTERFACE  -   Wrapper for modules that can be called from C++    * 
 !                   used to get DtControls pointer                     *
 !                                                                      *
 !***********************************************************************

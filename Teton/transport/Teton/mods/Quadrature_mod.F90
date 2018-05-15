@@ -1,11 +1,11 @@
-# 1 "mods/Quadrature_mod.F90"
-! Quadrature Module:  Contains data structures describing angular quadrature
+! Quadrature Module:  Contains data structures describing angular quadrature 
 
 module Quadrature_mod 
 
   use kind_mod
   use constant_mod
   use Communicator_mod
+  use cudafor
 
   private
 
@@ -20,14 +20,19 @@ module Quadrature_mod
      integer,    pointer :: ListExit(:,:)     ! pairs of boundary element and corner IDs
   end type Exit
 
+  type, public :: GPUExit
+     integer             :: nExit             ! number of exiting boundary elements
+     integer, device, allocatable :: d_ListExit(:,:)   ! pairs of boundary element and corner IDs
+  end type GPUExit
+
 
   type, public :: Quadrature 
 
      integer              :: QuadID            ! quadrature ID
-     integer              :: Groups            ! number of energy groups
-     integer              :: NumAngles         ! number of angles
+     integer              :: Groups            ! number of energy groups 
+     integer              :: NumAngles         ! number of angles 
      integer              :: NumMoments        ! number of angular moments
-     integer              :: Order             ! quadrature order
+     integer              :: Order             ! quadrature order 
      integer              :: NPolar            ! number of polar angles
      integer              :: NAzimuthal        ! number of azimuthal angles
      integer              :: PolarAxis         ! polar axis (1,2 or 3)
@@ -38,8 +43,10 @@ module Quadrature_mod
      logical(kind=1), pointer  :: FinishingDirection(:)
 
      real(adqt), pointer  :: Gnu(:)            ! energy group boundaries
-     real(adqt), pointer  :: Omega(:,:)        ! direction cosines
-     real(adqt), pointer  :: Weight(:)         ! quadrature weights
+     real(adqt), pinned, allocatable :: Omega(:,:)        ! direction cosines 
+     real(adqt), device, allocatable :: d_Omega(:,:)        ! direction cosines 
+     real(adqt), pinned, allocatable :: Weight(:)         ! quadrature weights 
+     real(adqt), device, allocatable :: d_Weight(:)         ! quadrature weights 
 
 !    Spherical Harmonics
      real(adqt), pointer  :: Ynm(:,:)          ! Ynm(NumMoments,NumAngles)
@@ -58,10 +65,15 @@ module Quadrature_mod
      integer             :: NangBin            ! maximun number of angles per bin
 
      integer,    pointer :: NangBinList(:)     ! NangBinList(NumBin)
-     integer,    pointer :: AngleToBin(:)      ! AngleToBin(NumAngles)
-     integer,    pointer :: next(:,:)          ! next(ncornr+1,NumAngles)
-     integer,    pointer :: nextZ(:,:)         ! nextZ(nzones,NumAngles)
-     integer,    pointer :: AngleOrder(:,:)    ! AngleOrder(NangBin,NumBin)
+     integer,    pointer :: AngleToBin(:)      ! AngleToBin(NumAngles) 
+     integer,    pinned, allocatable :: next(:,:)          ! next(ncornr+1,NumAngles)
+     integer,    pinned, allocatable :: nextZ(:,:)         ! nextZ(nzones,NumAngles)
+     integer,    pinned, allocatable :: passZstart(:,:)    ! passZstart(nzones,NumAngles) ! actually don't need this much, but being conservative
+     integer,    pinned, allocatable :: AngleOrder(:,:)    ! AngleOrder(NangBin,NumBin)
+     integer,    device, allocatable :: d_next(:,:)        ! next(ncornr+1,NumAngles)
+     integer,    device, allocatable :: d_nextZ(:,:)       ! nextZ(nzones,NumAngles)
+     integer,    device, allocatable :: d_passZstart(:,:)    ! passZstart(nzones,NumAngles) ! actually don't need this much, but being conservative
+     integer,    device, allocatable :: d_AngleOrder(:,:)    ! AngleOrder(NangBin,NumBin)
      integer,    pointer :: RecvOrder0(:,:)    ! RecvOrder0(ncomm,NumBin)
      integer,    pointer :: SendOrder0(:)      ! SendOrder0(NumBin)
      integer,    pointer :: RecvOrder(:,:)     ! RecvOrder(ncomm,NumBin)
@@ -76,6 +88,8 @@ module Quadrature_mod
 
      type(Communicator), pointer :: iComms(:,:) ! Pointers to communicators
      type(Exit),         pointer :: iExit(:)    ! Pointers to exiting boundary lists
+
+     type(GPUExit), managed, allocatable :: m_iExit(:)  ! managed version of the same.
 
   end type Quadrature 
 
@@ -183,13 +197,16 @@ contains
     allocate( self % StartingDirection(self % NumAngles) )
     allocate( self % FinishingDirection(self % NumAngles) )
     allocate( self % Omega(Ndim,self % NumAngles) )
+    allocate( self % d_Omega(Ndim,self % NumAngles) )
     allocate( self % Weight(self % NumAngles) )
+    allocate( self % d_Weight(self % NumAngles) )
     allocate( self % Ynm(self % NumMoments,self % NumAngles) )
     allocate( self % Pnm(self % NumMoments,self % NumAngles) )
 
 
     self % Gnu(:) = Gnu(:)
 
+    print *, "calling rtquad, which will set d_weight"
     call rtquad(self, Ndim, igeom)
     call snynmset(self, Ndim, isctp1)
     call snpnmset(self, Ndim, isctp1)
@@ -214,7 +231,7 @@ contains
     elseif (Ndim == 3) then
 !     self% NumBin  = self% NumAngles
 !     self% NangBin = 1
-       self% NumBin    = 8 
+       self% NumBin    = 8
        self% NangBin   = self% NumAngles/self% NumBin
     endif
 
@@ -223,7 +240,12 @@ contains
       allocate( self% AngleToBin(self% NumAngles) )
       allocate( self% next(Size%ncornr+1,self % NumAngles) )
       allocate( self% nextZ(Size%nzones,self % NumAngles) )
+      allocate( self% passZstart(Size%nzones,self % NumAngles) )
       allocate( self% AngleOrder(self% NangBin,self% NumBin) )
+      allocate( self% d_next(Size%ncornr+1,self % NumAngles) )
+      allocate( self% d_nextZ(Size%nzones,self % NumAngles) )
+      allocate( self% d_passZstart(Size%nzones,self % NumAngles) )
+      allocate( self% d_AngleOrder(self% NangBin,self% NumBin) )
       allocate( self% RecvOrder0(self% NumBin,Size% ncomm) )
       allocate( self% SendOrder0(self% NumBin) )
       allocate( self% RecvOrder(self% NumBin,Size% ncomm) )
@@ -237,6 +259,8 @@ contains
       allocate( self% Converged(self% NumBin) )
 
       allocate( self% iExit(self % NumAngles) )
+      allocate( self% m_iExit(self % NumAngles) )
+
       allocate( self% iComms(Size% ncomm,self% NumBin) )
     endif
 
@@ -343,7 +367,9 @@ contains
     deallocate( self % StartingDirection )
     deallocate( self % FinishingDirection )
     deallocate( self % Omega )
+    deallocate( self % d_Omega )
     deallocate( self % Weight )
+    deallocate( self % d_Weight )
     deallocate( self % Ynm )
     deallocate( self % Pnm )
 
@@ -353,7 +379,12 @@ contains
       deallocate( self% AngleToBin )
       deallocate( self% next )
       deallocate( self% nextZ )
+      deallocate( self% passZstart )
       deallocate( self% AngleOrder )
+      deallocate( self% d_next )
+      deallocate( self% d_nextZ )
+      deallocate( self% d_passZstart )
+      deallocate( self% d_AngleOrder )
       deallocate( self% RecvOrder0 )
       deallocate( self% SendOrder0 )
       deallocate( self% RecvOrder )
@@ -366,6 +397,7 @@ contains
       deallocate( self% Flux )
       deallocate( self% iComms )
       deallocate( self% iExit )
+      deallocate( self% m_iExit)
     endif
 
 !   Space for angular coefficients
@@ -432,21 +464,32 @@ contains
                                                                                                  
 !   Local
     type(Exit), pointer              :: iExit 
+    !type(Exit), device, pointer    :: m_iExit 
+    !integer :: istat
 
 
     iExit => self% iExit(angleID)
+    !m_iExit => self% m_iExit(angleID)
 
     allocate( iExit% ListExit(2,nExit) )
 
     iExit% nExit               = nExit
     iExit% ListExit(:,1:nExit) = ListExit(:,1:nExit)
 
+
+    allocate( self%m_iExit(angleID)% d_ListExit(2,nExit) )
+
+    ! Copy ListExit data to GPU
+    self%m_iExit(angleID)% nExit               = nExit
+    self%m_iExit(angleID)% d_ListExit(:,1:nExit) = ListExit(:,1:nExit)
+    
     return
                                                                                                  
   end subroutine Quadrature_ctorExit
 
+
 !=======================================================================
-! restore Communication order
+! restore Communication order 
 !=======================================================================
   subroutine Quadrature_resCommOrd(self)
                                                                                                   

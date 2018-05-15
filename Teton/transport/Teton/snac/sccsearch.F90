@@ -1,4 +1,3 @@
-# 1 "snac/sccsearch.F90"
 !***********************************************************************
 !                        Version 1:  03/02, PFN                        *
 !                                                                      *
@@ -60,7 +59,7 @@
    stack(stackindex) = zone 
    onstack(zone)     = .TRUE. 
 
-!  Loop over all downstream zones that have not been completed
+!  Loop over all downstream zones that have not been completed 
 
    ZoneLoop: do i=1,nDSZ(zone) 
 

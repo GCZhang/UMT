@@ -1,4 +1,3 @@
-# 1 "aux/getRunStats.F90"
 !***********************************************************************
 !                     Version 0: 01/2005 PFN                           *
 !                                                                      *
@@ -93,7 +92,7 @@
      endif
    endif
 
-!  Time Step Statistics
+!  Time Step Statistics 
 
    DtControlNode = getControlProcess(DtControls)
 

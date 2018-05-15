@@ -1,4 +1,3 @@
-# 1 "rt/initcomm.F90"
 !***********************************************************************
 !                        Version 1:  11/98, PFN                        *
 !                                                                      *
@@ -23,7 +22,7 @@
 
    implicit none
 
-!  Include 1
+!  Include MPI
 
    include 'mpif.h'
 

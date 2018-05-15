@@ -1,6 +1,5 @@
-# 1 "mods/Communicator_mod.F90"
 ! Communication Module:  Contains data structures that tell processors
-!                        how to communicate with each other
+!                        how to communicate with each other 
                                                                                  
 module Communicator_mod 
 

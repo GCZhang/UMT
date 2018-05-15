@@ -1,4 +1,3 @@
-# 1 "snac/findseeds.F90"
 !***********************************************************************
 !                        Version 1:  04/02, PFN                        *
 !                                                                      *
@@ -9,7 +8,7 @@
 !                  be situations where no seeds can be found; this     *
 !                  will occur if there is a mesh cycle right at the    *
 !                  boundary.  In this situation, we are forced to use  *
-!                  some old information to get started.                *
+!                  some old information to get started.                * 
 !                                                                      *
 !   Input:                                                             *
 !                                                                      *
@@ -62,7 +61,7 @@
    if (nseed == 0) then
 
 !  If no seeds were found, find a zone on the boundary that requires
-!  the fewest incident fluxes
+!  the fewest incident fluxes 
 
      minNeed = nzones
      zoneID  = 0

@@ -1,4 +1,3 @@
-# 1 "snac/cyclebreaker.F90"
 !***********************************************************************
 !                        Version 1:  07/01, PFN                        *
 !                                                                      *
@@ -77,7 +76,7 @@
 
    stack(:)   = 0
 
-!  Make a list of all remaining zones
+!  Make a list of all remaining zones 
 
    nleft = 0
 

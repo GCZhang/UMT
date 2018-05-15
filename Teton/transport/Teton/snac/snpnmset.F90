@@ -1,4 +1,3 @@
-# 1 "snac/snpnmset.F90"
 !***********************************************************************
    subroutine snpnmset(self, ndim, isctp1)
 

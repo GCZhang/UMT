@@ -1,4 +1,3 @@
-# 1 "rt/getAbsorptionRate.F90"
 !***********************************************************************
 !                        Version 1:  05/92, PFN                        *
 !                                                                      *
@@ -33,8 +32,8 @@
 
    real(adqt) :: sumrad 
 
-!  Calculate the total energy absorption rate density
-
+!  Calculate the total energy absorption rate density 
+!$omp parallel do private(zone,nCorner,c0,c,sumrad,ig)
    ZoneLoop: do zone=1,Size%nzones
                                                                                                  
      Z       => getZoneData(Geom, zone)

@@ -1,5 +1,4 @@
-# 1 "mods/Boundary_mod.F90"
-! Boundary Module:  Contains data structures for boundary fluxes
+! Boundary Module:  Contains data structures for boundary fluxes 
 
 module Boundary_mod 
 
@@ -16,20 +15,23 @@ module Boundary_mod
          getReflectedAngle
 
   type, public :: ReflectedAngle
-     integer,    pointer  :: ReflAngle(:)      ! list of angle IDs
+     integer,    allocatable  :: ReflAngle(:)      ! list of angle IDs
+     integer, device, allocatable :: d_ReflAngle(:) ! list of angle IDs on device
   end type ReflectedAngle
                                                                                  
   type, public :: Boundary 
 
-     integer              :: NumBdyElem        ! number of boundary elements
+     integer              :: NumBdyElem        ! number of boundary elements 
      integer              :: BdyElem1          ! index of first boundary element
-     integer              :: ProfileID         ! source profile ID
+     integer              :: ProfileID         ! source profile ID 
      integer              :: NeighborID        ! shared process ID
      integer              :: EditID            ! edit ID
 
-     character(len=8)     :: Type              ! boundary type
+     character(len=8)     :: Type              ! boundary type 
 
-     integer, pointer     :: BdyToC(:)         ! BdyToC(NumBdyElem)
+     integer, contiguous, pointer     :: BdyToC(:)         ! BdyToC(NumBdyElem)
+     integer, device, allocatable :: d_BdyToC(:)         ! BdyToC(NumBdyElem)
+     
 
      real(adqt), pointer  :: A_bdy(:,:)        ! A_bdy(ndim,NumBdyElem)
      real(adqt), pointer  :: Radius(:)         ! Radius(NumBdyElem)
@@ -143,6 +145,8 @@ contains
     self % Type       = Type
 
     allocate( self % BdyToC(self% NumBdyElem) )
+    allocate( self % d_BdyToC(self% NumBdyElem) )
+
     allocate( self % A_bdy(Size%ndim,self% NumBdyElem) )
 
     if (Size%ndim == 2) then
@@ -173,7 +177,7 @@ contains
                                                                                                   
     integer, intent(in)            :: Groups 
 
-!   Allocate space
+!   Allocate space 
                                                                                                   
 !    allocate( self % Psi(Groups,self% NumBdyElem) )
 
@@ -229,8 +233,12 @@ contains
       iRef    => self% iRef(set)
 
       allocate( iRef% ReflAngle(QuadSet% NumAngles) )
+      allocate( iRef% d_ReflAngle(QuadSet% NumAngles) )
 
       iRef% ReflAngle(:) = -1
+      ! duplicate on device:
+      iRef% d_ReflAngle(:) = -1
+
     enddo
 
     return
@@ -263,6 +271,7 @@ contains
       iRef    => self% iRef(set)
                                                                                                    
       deallocate( iRef% ReflAngle )
+      deallocate( iRef% d_ReflAngle )
     enddo
                                                                                                    
     return
@@ -322,6 +331,9 @@ contains
     set  =  QuadSet% QuadID
     iRef => self% iRef(set)                                                                                                 
     iRef% ReflAngle(IncAngle) = ReflAngle
+    ! set this value on the device too.
+    iRef% d_ReflAngle(IncAngle) = ReflAngle
+    
                                                                                                    
     return
                                                                                                    
@@ -332,7 +344,7 @@ contains
 !=======================================================================
   function Boundary_getNumBdyElem(self) result(NumBdyElem)
 
-!    Returns the number of boundary elements
+!    Returns the number of boundary elements 
 
 !    variable declarations
      implicit none
@@ -372,7 +384,7 @@ contains
 !=======================================================================
   function Boundary_getProf(self) result(ProfileID)
                                                                                                     
-!    Returns the profile ID
+!    Returns the profile ID 
                                                                                                     
 !    variable declarations
      implicit none
@@ -432,7 +444,7 @@ contains
 !=======================================================================
   function Boundary_getType(self) result(Type)
 
-!    Returns the type
+!    Returns the type 
                                                                                                  
 !    variable declarations
      implicit none
@@ -463,6 +475,8 @@ contains
 !   Local
 
     deallocate( self % BdyToC )
+    deallocate( self % d_BdyToC )
+
     deallocate( self % A_bdy  )
     deallocate( self % Radius )
 

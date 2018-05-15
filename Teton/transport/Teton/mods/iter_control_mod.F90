@@ -1,16 +1,7 @@
-# 1 "mods/iter_control_mod.F90"
 module iter_control_mod
 
-# 1 "./include/assert.h" 1 
+#include "assert.h"
 !  Assertion checking include file for TETON
-
-# 7
-
-
-
-
-
-# 4 "mods/iter_control_mod.F90" 2 
       use kind_mod
       use constant_mod
       use io_mod

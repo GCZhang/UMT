@@ -40,6 +40,8 @@ INFRASTRUCTURE_OBJECTS=communication/DomainNeighborMapInst.o communication/CommA
 	transport/Teton/mods/iter_control_mod.o \
 	transport/Teton/mods/kind_mod.o \
 	transport/Teton/mods/radconstant_mod.o \
+	transport/Teton/mods/nvtx_mod.o\
+	transport/Teton/mods/GPUhelper_mod.o\
 	transport/Teton/misc/assert.o \
 	transport/Teton/misc/f90advise.o \
 	transport/Teton/misc/f90fatal.o \
@@ -122,6 +124,8 @@ INFRASTRUCTURE_OBJECTS=communication/DomainNeighborMapInst.o communication/CommA
 	transport/Teton/snac/snpnmset.o \
 	transport/Teton/snac/snreflect.o \
 	transport/Teton/snac/snswp3d.o \
+	transport/Teton/snac/cu_snswp3d.o \
+	transport/Teton/snac/GPU_sweep.o \
 	transport/Teton/snac/snynmset.o\
 	utilities/VERIFY.o\
 	utilities/DBC.o\
@@ -133,11 +137,19 @@ all: subdirs libInfrastructure.$(LIB_EXT) libTetonUtils.$(LIB_EXT) TetonTest.o
 
 
 
+ifeq ($(STATIC_LINK),on)
+libInfrastructure.$(LIB_EXT):$(INFRASTRUCTURE_OBJECTS)
+	$(LD) $(LDFLAGS) $@ $^ $(LIBPATH) $(PLATFORM_Infrastructure_EXTRAS)
+
+libTetonUtils.$(LIB_EXT):$(UTILS_OBJECTS)
+	$(LD) $(LDFLAGS) $@ $^ $(LIBPATH) $(PLATFORM_TetonUtils_EXTRAS)
+else
 libInfrastructure.$(LIB_EXT):$(INFRASTRUCTURE_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBPATH) $(PLATFORM_Infrastructure_EXTRAS)
 
 libTetonUtils.$(LIB_EXT):$(UTILS_OBJECTS)
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBPATH) $(PLATFORM_TetonUtils_EXTRAS)
+endif
 
 
 # SuOlsonTest target only for internal testing purposes

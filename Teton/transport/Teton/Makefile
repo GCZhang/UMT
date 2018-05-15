@@ -25,6 +25,8 @@ SOURCES=mods/BoundaryList_mod.F90 \
         mods/iter_control_mod.F90 \
         mods/kind_mod.F90 \
         mods/radconstant_mod.F90 \
+        mods/nvtx_mod.F90 \
+	mods/GPUhelper_mod.F90 \
         misc/assert.F90 \
         misc/f90advise.F90 \
         misc/f90fatal.F90 \
@@ -99,7 +101,6 @@ SOURCES=mods/BoundaryList_mod.F90 \
         snac/fixZone.F90 \
         snac/getDownStreamData.F90 \
         snac/sccsearch.F90 \
-        snac/snflwxyz.F90 \
         snac/snmoments.F90 \
         snac/snmref.F90 \
         snac/snneed.F90 \
@@ -107,9 +108,15 @@ SOURCES=mods/BoundaryList_mod.F90 \
         snac/snpnmset.F90 \
         snac/snreflect.F90 \
         snac/snswp3d.F90 \
+        snac/snflwxyz.F90 \
         snac/snynmset.F90
 
+CUDASRC=snac/cu_snswp3d.cu \
+        snac/GPU_sweep.cu
+
+
 OBJECTS = ${patsubst %.F90,%.o,$(SOURCES)}
+OBJECTS += ${patsubst %.cu,%.o,$(CUDASRC)}
 
 all: $(OBJECTS)
 

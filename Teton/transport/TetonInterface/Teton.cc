@@ -6,7 +6,7 @@
 #include "DBC.hh"
 #include <stdexcept>
 #include <iostream>
-
+#include "nvToolsExt.h"
 #include "transport/TetonInterface/Teton.hh"
 #include "transport/TetonInterface/TetonNT.hh"
 //#include "transport/EIPhysics/Rad3T/Rad3TCommon.hh"
@@ -19,9 +19,46 @@ using std::endl;
 
 #undef max
 
+extern "C" void Timer_Beg(const char *);
+extern "C" void Timer_End(const char *);
+extern "C" void Timer_Print(void);
+
+
+#include <new> // bad_alloc, bad_array_new_length
+
+template <class T> struct Mallocator2 {
+
+  typedef T value_type;
+  Mallocator2() { }; // default ctor not required
+  template <class U> Mallocator2(const Mallocator2<U>&);// noexcept { };
+  template <class U> bool operator==(
+				     const Mallocator2<U>&) const { return true; }
+  template <class U> bool operator!=(
+				     const Mallocator2<U>&) const { return false; }
+
+  T * allocate(const size_t n) const {
+    if (n == 0) { return NULL; }
+    if (n > static_cast<size_t>(-1) / sizeof(T)) {
+      printf ("Error in Mallocator2\n");
+    }
+    printf ("Mallocator2 DIS!\n");
+    void * const pv = malloc(n * sizeof(T));
+    if (!pv) { throw std::bad_alloc(); }
+    return static_cast<T *>(pv);
+  }
+
+  void deallocate(T * const p, size_t) const {
+    free(p);
+  }
+
+};
+
+
 extern "C"
 {
 
+    #define cudaFuncCachePreferL1 2
+    extern int cudaDeviceSetCacheConfig2(int);
 
 #if !defined LINUX && !defined BGP
     extern void *
@@ -127,6 +164,19 @@ extern "C"
           double *,   // RadEnergyDensity 
           double *);  // angleLoopTime
 
+    void
+    F77_ID(pinmem_, pinmem, PINMEM)
+      ( double *, // psir
+        double *); // Phi
+
+
+    void 
+    F77_ID(radtr_, radtr, RADTR)
+        ( double *,   // PSIR
+          double *,   // PHIR
+          double *,   // RadEnergyDensity 
+          double *);  // angleLoopTime
+
 }
 
 template <typename Mesh>
@@ -170,9 +220,11 @@ Teton<Mesh>::resize() {
 
     int isSphere = 0, isCylinder = 0, isSlab =0, isXy = 0, isRz = 0;
     int isXyz = 0;
-    int D_ncornr, D_nzones,  D_ncornr_npsi;
+    int D_ncornr, D_nzones;
+    long int D_ncornr_npsi;
     int D_nbedit, D_nbedit_ngr;
-    int D_ncornr_ngr, D_nbedit1_ngr, D_npnts_ndim;
+    long int D_ncornr_ngr;
+    int D_nbedit1_ngr, D_npnts_ndim;
     int D_nzones_ngr, D_zones_ndim, D_ncornr_ndim, D_ngr1;
 // Set  ndim
     isSphere   = ( strncmp(igeom.data, "sphere  ", 8) == 0 );
@@ -199,9 +251,18 @@ Teton<Mesh>::resize() {
 
 
     D_ncornr            = std::max(ncornr, 0);
+    cout<<"ncornr = "<<ncornr<<endl;
     D_nzones            = std::max(nzones, 0);
-    D_ncornr_npsi       = std::max(ncornr * npsi, 0);
-    D_ncornr_ngr        = std::max(ncornr * ngr, 0);
+    cout<<"ncornr ="<<ncornr<<"npsi ="<<npsi<<endl;
+    long temp = (long)ncornr*(long)npsi;
+    cout<<"temp = "<<temp<<endl;
+    D_ncornr_npsi       = temp; //std::max(temp, 0); //ncornr*npsi overflows int
+    cout<<"D_ncornr_npsi ="<<D_ncornr_npsi<<endl;
+
+    temp = (long)ncornr*(long)ngr;
+    cout<<"temp = "<<temp<<endl;
+    
+    D_ncornr_ngr        = temp;//std::max(temp, 0);
     D_ncornr_ndim       = std::max(ncornr * ndim, 0);
     D_nbedit            = std::max(nbedit, 0);
     D_nbedit_ngr        = std::max(nbedit * ngr, 0);
@@ -239,6 +300,7 @@ Teton<Mesh>::resize() {
     rho.resize(D_nzones);
     SMatEff.resize(D_nzones);
     gnu.resize(D_ngr1);
+
 }
 
 // ------------------------------------------------------------
@@ -822,6 +884,9 @@ Teton<Mesh>::linkKull(Teton<Mesh>::MeshType &M,
         }
     }
     
+    // YKT experiment:
+    //cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+
 // Allocate persistant arrays
     resize();
 
@@ -1364,7 +1429,16 @@ Teton<Mesh>::linkKull(Teton<Mesh>::MeshType &M,
     std::vector<int>().swap(ctoface);
     std::vector<int>().swap(zonetosrc);
    
-   
+
+    /*cout<<"pinning psi and phi in C code"<<endl;
+    // Pin the memory (psi should be pinned when created in kull, not in Teton/radtr)
+    F77_ID(pinmem_, pinmem, PINMEM)
+      ( &psir[0],               // double *
+        &Phi[0] );               // double *
+    */
+
+
+
 }
 
 template <typename Mesh>
@@ -1442,8 +1516,12 @@ Teton<Mesh>::CInitMaterial(PartList<Mesh> &partList)
 
 // Initialize corner radiation variables
 
+    cout<<"calling rtinit. ownedZones = "<<ownedZones<<endl;
+
     F77_ID(rtinit_, rtinit, RTINIT)
         (&EnergyRadiation, &psir[0]);
+
+    cout<<"finished rtinit"<<endl;
 
     F77_ID(setenergyedits_, setenergyedits, SETENERGYEDITS)
         (&EnergyRadiation, &EnergyMaterial, &EnergyIncident, 
@@ -1714,8 +1792,12 @@ Teton<Mesh>::CrelinkMesh() {
         }
     }
 
+    Timer_Beg("getgeometry");
+    nvtxRangePushA("getgeometry");
     F77_ID(getgeometry_, getgeometry, GETGEOMETRY)
         ();
+    nvtxRangePop();
+    Timer_End("getgeometry");
       
 }
 

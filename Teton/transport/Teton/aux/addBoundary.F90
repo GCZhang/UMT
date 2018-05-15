@@ -1,4 +1,3 @@
-# 1 "aux/addBoundary.F90"
 !***********************************************************************
 !                         Version 0: 03/08 PFN                         *
 !                                                                      *
@@ -33,7 +32,7 @@
    integer  :: BdyID
    integer  :: nReflecting
               
-!  Add this profile to the list
+!  Add this profile to the list 
 
    do BdyID=1,numBCTotal
 

@@ -1,4 +1,3 @@
-# 1 "mods/Size_mod.F90"
 ! Geometry Modules:  geometry and connectivity information used by Sn
                                                                                  
 module Size_mod 

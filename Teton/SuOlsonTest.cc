@@ -8,6 +8,8 @@
 #include "geom/CMI/MeshBase.hh"
 #include "mpi.h"
 #include "omp.h"
+#include "cuda_runtime.h"
+#define NUMGPUS 4
 
 // #ifdef BGP
 #if 0
@@ -20,8 +22,22 @@
 #include "TAU.h"
 #endif
 
+extern "C" void bindthreads(void);
+extern "C" void summary_start(void);
+extern "C" void summary_stop(void);
+extern "C" void trace_start(void);
+extern "C" void trace_stop(void);
+extern "C" void HPM_Prof_start(void);
+extern "C" void HPM_Prof_stop(void);
+extern "C" void Timer_Beg(const char *);
+extern "C" void Timer_End(const char *);
+extern "C" void Timer_Print(void);
 void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>& myPartList,
                 int theNumGroups, int quadType, int theOrder, int Npolar, int Nazimu);
+
+extern"C" {
+//void pgf90_compiled();
+}
 
 using namespace Geometry;
 using std::cout;
@@ -39,30 +55,51 @@ int main(int argc, char* argv[])
     int Npolar=8, Nazimu=4;
     int quadType=2;
     std::string theVersionNumber = "1.0";
+
+    // pgi provided work around for maxloc bug:
+    // call pgf90_compiled in main.
+    //pgf90_compiled();
+
     
     MPI_Init(&argc,&argv);
     MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
     MPI_Comm_size(MPI_COMM_WORLD,&numProcs);
     
+    //bindthreads(); // YKT optional binding utility
     if( argc <2 )
     {
         if(myRank == 0)
             cout<<" Must input mesh file name on input line."<<endl;
         exit(1);
     }    
-    if(myRank == 0)
-    {
-            cout<<" Executing UMT2013 Number of ranks ="<<numProcs<<endl;
+
+    int numDevices;
+    cudaError_t istat;
+    //istat = cudaGetDeviceCount(&numDevices);
+    //cout<<"myRank = "<< myRank <<"numDevices = "<<numDevices<<"istat = "<<istat<<endl;
+    // Using mps pipe directories to set device
+    //istat = cudaSetDevice(myRank%numDevices);
+    //cout<<"myRank = "<<myRank <<" istat = "<<istat<<endl;
 #pragma omp parallel
-{
-	    int myTID = omp_get_thread_num();
-	    int numThreads = omp_get_num_threads();
-            if (myTID == 0) 
-            {
-                 cout<<" and number of OMP threads  ="<< numThreads <<endl;
-            }
-}
+    {
+      int myTID = omp_get_thread_num();
+      int numThreads = omp_get_num_threads();
+      if(myTID == 0) {
+	//cout<<"myRank = "<<myRank<<" tried setting gpu device to "<<myRank%numDevices<<endl;
+	if(myRank == 0) {
+	  cout<<" Executing UMT2015 Number of ranks ="<<numProcs<<endl;
+	  cout<<" and number of OMP threads  ="<< numThreads <<endl;
+	}
+      }
     }
+
+    // If setting GPU device through setting cuda visible devices, this print may say all devices are GPU 0
+    // which is relatively true (but not absolutly)
+    int devnum;
+    istat = cudaGetDevice(&devnum);
+    cout<<" myrank = "<<myRank<<"GPU number = "<<devnum<<"istat ="<<istat<<endl;
+    printf("Check the device: %s\n", cudaGetErrorString(istat));
+
 
     if( argc >= 3 )
     {
@@ -108,6 +145,10 @@ int main(int argc, char* argv[])
         cout<<" Building mesh..."<<endl;
     std::string meshFileName(argv[1]);
     MeshBase myMesh( meshFileName.c_str() );
+
+    // print mesh complete if everyone reaches this point
+    MPI_Barrier(MPI_COMM_WORLD);
+
     if(myRank == 0)
         cout<<" Mesh complete."<<endl;
 
@@ -173,6 +214,7 @@ int main(int argc, char* argv[])
 
     double time;
     double dt= newDT(myTetonObject);
+    // YKT these should probably be longs....
     int numZones = myMesh.getNumberOfOwnedZones();
     int totMeshZones=0;
     
@@ -183,6 +225,11 @@ int main(int argc, char* argv[])
     int numFluxes = myTetonObject.psir.size();
     int cumulativeIterationCount= 0;
     double cumulativeWorkTime = 0.0;
+
+//  trace_start();
+    Timer_Beg("work");
+    //summary_start(); // YKT
+//  HPM_Prof_start();
     
     if(myRank == 0)
         cout<<" Starting time advance..."<<endl;
@@ -205,6 +252,13 @@ int main(int argc, char* argv[])
     if( myRank == 0 )
         cout<<" SuOlson Test version "<<theVersionNumber<<" completed at time= "<<time<<"  goalTime= "<<goalTime<<endl;
 
+//  HPM_Prof_stop();
+    //summary_stop(); // YKT
+    Timer_End("work");
+    Timer_Print();
+    fflush(stdout);
+//  trace_stop();
+
     checkAnalyticAnswer(goalTime,myMesh,myPartList);     
 
     cumulativeWorkTime/=1.0e6;  // microseconds -> seconds
@@ -214,6 +268,9 @@ int main(int argc, char* argv[])
             static_cast<double>(myTetonObject.nangsn) * 
             static_cast<double>(totMeshZones) * 
             8.0;   
+        cout<<"ngroups = "<<myTetonObject.ngr<<endl;
+        cout<<"nangsn = "<<myTetonObject.nangsn<<endl;
+        cout<<"tot zones = "<<totMeshZones<<endl;
         cout<<"numUnknowns = "<<numUnknowns<<endl;
         
         dumpLineout(myMesh, myTetonObject,"dump.out");
@@ -234,6 +291,8 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
 {
     //
     // ugh.  accessing public data of Teton
+
+  cout<<"entered initialize"<<endl;
     
     strncpy(theTeton.igeom.data,"xyz     ", 8);
     strncpy(theTeton.iaccel.data,"off     ", 8);  // iterative acceleration: gda, or off
@@ -247,6 +306,8 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
     // define volume source on some subset of zones with the given
     // time history
     getZoneIDs('z',0.5, myMesh, theSourceZones);
+
+  cout<<"got zone ids"<<endl;
 
     double theSourceTemp = 1.0;
     
@@ -268,8 +329,12 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
     TetonVolumeSource theVolSource(theSourceZones, theSrcName, theType, theShape, 1.0, theTimeTemps);
     volSourceData[0]=theVolSource;
 
+  cout<<"set vol source"<<endl;
+
     // set group boundaries
     setFrequencies( theNumGroups, quadType, theOrder, Npolar, Nazimu, freqData);
+
+  cout<<"set frequencies"<<endl;
 
     // set boundary information
     std::vector<std::string> tagNames(6),typeNames(6),shapeNames(6);
@@ -290,6 +355,8 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
 
     setBoundary( myMesh, boundaryData, tagNames, typeNames, shapeNames);
     
+  cout<<"set boundary"<<endl;
+
     //
     // ugh.  again accessing public data of Teton
     theTeton.ngr = freqData.size();
@@ -313,8 +380,10 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
          
     theTeton.linkKull(myMesh, freqData, boundaryData, volSourceData);
     
+    cout<<"linkKull"<<endl;
     
     theTeton.CInitMaterial(myPartList);
+    cout<<"set CInitMaterial"<<endl;
     theTeton.CsetControls();
 
     for(PartList<MeshBase>::iterator pIt = myPartList.begin();

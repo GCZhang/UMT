@@ -1,4 +1,3 @@
-# 1 "rt/SweepScheduler.F90"
 !***********************************************************************
 !                        Version 1:  09/96, PFN                        *
 !                                                                      *
@@ -21,10 +20,11 @@
    use Quadrature_mod
    use BoundaryList_mod
    use Boundary_mod
+   use cudafor
 
    implicit none
 
-!  Include 1
+!  Include MPI
 
    include 'mpif.h'
 
@@ -37,7 +37,7 @@
               ierr, nleft, my_node
 
    integer :: NumQuadSets, NumBin, NangBin, nShared, nReflecting
-   integer :: angle, mRef
+   integer :: angle, mRef, istat
    integer :: n
 
    integer, dimension (1) :: imax
@@ -71,7 +71,7 @@
      allocate( BinTally(NumBin) )
      allocate( Order(NumBin) )
      allocate( temp(NumBin) )
-     allocate( buffer(NumBin,nShared) )
+     if (nShared > 0) allocate( buffer(NumBin,nShared) )
      allocate( BinOffSet(NumBin) )
 
 !  Tally message size by angle bin
@@ -124,8 +124,7 @@
        Order(ndone)      = imax(1)
        BinTally(imax(1)) = -999 
        depend(imax(1))   = -999 
-
-       imax      = maxloc( depend(1:NumBin) )
+       imax   = maxloc( depend(1:NumBin) )
        maxdepend = depend(imax(1))
      enddo
 
@@ -169,7 +168,7 @@
        do i=nleft,1,-1
          Order(i)          = imax(1)
          BinTally(imax(1)) = -999 
-         imax              = maxloc( BinTally(1:NumBin) )
+         imax    = maxloc( BinTally(1:NumBin) )
        enddo
 
 !  Send my order to all neighbors
@@ -216,12 +215,15 @@
        enddo
      enddo
 
+     istat = cudaMemcpyAsync(QuadSet%d_AngleOrder, QuadSet%AngleOrder, QuadSet%NangBin*NumBin, 0)
+
+
 !  Release Temporaries
      deallocate( depend )
      deallocate( BinTally )
      deallocate( Order )
      deallocate( temp )
-     deallocate( buffer )
+     if (nShared > 0) deallocate( buffer )
      deallocate( BinOffSet )
 
    enddo AngleSetLoop
@@ -230,4 +232,3 @@
 
    return
    end subroutine SweepScheduler 
-

@@ -1,4 +1,3 @@
-# 1 "mods/kind_mod.F90"
 ! Kind Module:  define the kind required for the requested precision;
 !               `adqt' is the default "adequate" precision.
 !   short:  real kind for 6 digit accuracy

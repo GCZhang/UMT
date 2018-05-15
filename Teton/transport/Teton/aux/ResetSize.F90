@@ -1,8 +1,7 @@
-# 1 "aux/ResetSize.F90"
 !***********************************************************************
 !                        Version 0:  02/02, MKN                        *
 !                                                                      *
-!   RESETSIZE   -   Wrapper for modules that can be called from C++    *
+!   RESETSIZE   -   Wrapper for modules that can be called from C++    * 
 !                   used to get IterControls pointer                   *
 !                                                                      *
 !***********************************************************************

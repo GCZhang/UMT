@@ -46,7 +46,9 @@ snac/snflwxyz.o : \
         mods/constant_mod.o\
         mods/kind_mod.o\
         mods/Size_mod.o\
-        mods/Quadrature_mod.o
+        mods/Quadrature_mod.o\
+	mods/nvtx_mod.o\
+	mods/GPUhelper_mod.o
 snac/sccsearch.o : \
         mods/Geometry_mod.o\
         mods/Size_mod.o\
@@ -377,7 +379,9 @@ control/advanceRT.o : \
         mods/Material_mod.o\
         mods/Quadrature_mod.o\
         mods/Editor_mod.o\
-        mods/ZoneData_mod.o
+        mods/ZoneData_mod.o\
+	mods/GPUhelper_mod.o\
+	snac/snswp3d.o
 control/RadMoments.o : \
         mods/constant_mod.o\
         mods/radconstant_mod.o\

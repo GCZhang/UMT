@@ -1,8 +1,7 @@
-# 1 "aux/ConstructEditor.F90"
 !***********************************************************************
 !                        Version 0:  02/02, MKN                        *
 !                                                                      *
-!   CINTERFACE  -   Wrapper for modules that can be called from C++    *
+!   CINTERFACE  -   Wrapper for modules that can be called from C++    * 
 !                   used to get IterControls pointer                   *
 !                                                                      *
 !***********************************************************************
@@ -19,7 +18,7 @@
    implicit none
 
 
-!  Construct Problem Edits
+!  Construct Problem Edits 
 
    allocate (RadEdit)
 

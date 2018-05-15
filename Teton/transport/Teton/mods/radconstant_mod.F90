@@ -1,4 +1,3 @@
-# 1 "mods/radconstant_mod.F90"
 ! Radiation Constant Module:  commonly used radiation constants.
 
 module radconstant_mod

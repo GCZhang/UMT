@@ -1,4 +1,3 @@
-# 1 "rt/face_coords.F90"
 !=======================================================================
 !                        Version 1: 01/99, MRZ
 !-----------------------------------------------------------------------
@@ -14,7 +13,7 @@
 ! nfaces       number of faces
 ! ndim         number of spatial dimensions
 !
-! CToFace      maps corner face to zone face
+! CToFace      maps corner face to zone face 
 ! px(:,ip)     coordinates of point ip
 ! fx(:,iface)  coordinates of face center iface
 !-----------------------------------------------------------------------

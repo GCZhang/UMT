@@ -154,6 +154,7 @@ DISTFILES= \
 	./Teton/transport/Teton/misc/mpi_param_mod.F90 \
 	./Teton/transport/Teton/misc/mpif90.if \
 	./Teton/transport/Teton/misc/mpif90_mod.F90 \
+	./Teton/transport/Teton/mods/GPUData_mod.F90\
 	./Teton/transport/Teton/mods/BoundaryList_mod.F90 \
 	./Teton/transport/Teton/mods/Boundary_mod.F90 \
 	./Teton/transport/Teton/mods/Communicator_mod.F90 \

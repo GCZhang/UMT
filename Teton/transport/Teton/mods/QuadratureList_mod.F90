@@ -1,4 +1,3 @@
-# 1 "mods/QuadratureList_mod.F90"
 ! QuadratureList Module:  Contains a list of source profiles
 
 module QuadratureList_mod
@@ -17,7 +16,7 @@ module QuadratureList_mod
   type, public :: QuadratureList
 
      private
-     integer                     :: NumQuadSets  ! Total number of quadrature sets
+     integer                     :: NumQuadSets  ! Total number of quadrature sets 
      integer                     :: NumSnSets    ! Number of sets used for Sn sweeps
      type(Quadrature),   pointer :: iQuads(:)    ! Pointers to quadrature sets
 
@@ -74,7 +73,7 @@ contains
 
 
     self % NumQuadSets = NumQuadSets
-!    self % NumSnSets   = NumQuadSets - 1
+!    self % NumSnSets   = NumQuadSets - 1 
     self % NumSnSets   = 1
 
     allocate( self % iQuads(self % NumQuadSets) )
@@ -211,9 +210,9 @@ contains
 !-----------------------------------------------------------------------
   function QuadratureList_getQuad(self,QuadID) result(iQuad)
 
-!    Return a pointer to a quadrature set
-!      QuadID   quadrature set ID number
-!      iQuad    pointer to the quadrature set
+!    Return a pointer to a quadrature set 
+!      QuadID   quadrature set ID number 
+!      iQuad    pointer to the quadrature set 
 
 !    variable declarations
      implicit none
@@ -254,7 +253,7 @@ contains
   function QuadratureList_getEnergyGroups(self,numGroups) result(GrpBnds)
                                                                                             
 !    Returns all energy group bounds
-!      GrpBnds    array of energy group bounds
+!      GrpBnds    array of energy group bounds 
                                                                                             
 !    variable declarations
      implicit none
