@@ -29,9 +29,9 @@ extern "C" void trace_start(void);
 extern "C" void trace_stop(void);
 extern "C" void HPM_Prof_start(void);
 extern "C" void HPM_Prof_stop(void);
-extern "C" void Timer_Beg(const char *);
-extern "C" void Timer_End(const char *);
-extern "C" void Timer_Print(void);
+extern "C" void Timer_beg(const char *);
+extern "C" void Timer_end(const char *);
+extern "C" void Timer_print(void);
 void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>& myPartList,
                 int theNumGroups, int quadType, int theOrder, int Npolar, int Nazimu);
 
@@ -145,10 +145,6 @@ int main(int argc, char* argv[])
         cout<<" Building mesh..."<<endl;
     std::string meshFileName(argv[1]);
     MeshBase myMesh( meshFileName.c_str() );
-
-    // print mesh complete if everyone reaches this point
-    MPI_Barrier(MPI_COMM_WORLD);
-
     if(myRank == 0)
         cout<<" Mesh complete."<<endl;
 
@@ -227,7 +223,7 @@ int main(int argc, char* argv[])
     double cumulativeWorkTime = 0.0;
 
 //  trace_start();
-    Timer_Beg("work");
+    Timer_beg("work");
     //summary_start(); // YKT
 //  HPM_Prof_start();
     
@@ -254,8 +250,8 @@ int main(int argc, char* argv[])
 
 //  HPM_Prof_stop();
     //summary_stop(); // YKT
-    Timer_End("work");
-    Timer_Print();
+    Timer_end("work");
+    Timer_print();
     fflush(stdout);
 //  trace_stop();
 
@@ -380,10 +376,10 @@ void initialize(MeshBase& myMesh, Teton<MeshBase>& theTeton, PartList<MeshBase>&
          
     theTeton.linkKull(myMesh, freqData, boundaryData, volSourceData);
     
-    cout<<"linkKull"<<endl;
+  cout<<"linkKull"<<endl;
     
     theTeton.CInitMaterial(myPartList);
-    cout<<"set CInitMaterial"<<endl;
+  cout<<"set CInitMaterial"<<endl;
     theTeton.CsetControls();
 
     for(PartList<MeshBase>::iterator pIt = myPartList.begin();

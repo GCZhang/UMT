@@ -15,8 +15,8 @@ module Boundary_mod
          getReflectedAngle
 
   type, public :: ReflectedAngle
+     !integer,    pointer  :: ReflAngle(:)      ! list of angle IDs
      integer,    allocatable  :: ReflAngle(:)      ! list of angle IDs
-     integer, device, allocatable :: d_ReflAngle(:) ! list of angle IDs on device
   end type ReflectedAngle
                                                                                  
   type, public :: Boundary 
@@ -29,9 +29,7 @@ module Boundary_mod
 
      character(len=8)     :: Type              ! boundary type 
 
-     integer, contiguous, pointer     :: BdyToC(:)         ! BdyToC(NumBdyElem)
-     integer, device, allocatable :: d_BdyToC(:)         ! BdyToC(NumBdyElem)
-     
+     integer, pointer     :: BdyToC(:)         ! BdyToC(NumBdyElem)
 
      real(adqt), pointer  :: A_bdy(:,:)        ! A_bdy(ndim,NumBdyElem)
      real(adqt), pointer  :: Radius(:)         ! Radius(NumBdyElem)
@@ -145,8 +143,6 @@ contains
     self % Type       = Type
 
     allocate( self % BdyToC(self% NumBdyElem) )
-    allocate( self % d_BdyToC(self% NumBdyElem) )
-
     allocate( self % A_bdy(Size%ndim,self% NumBdyElem) )
 
     if (Size%ndim == 2) then
@@ -233,12 +229,8 @@ contains
       iRef    => self% iRef(set)
 
       allocate( iRef% ReflAngle(QuadSet% NumAngles) )
-      allocate( iRef% d_ReflAngle(QuadSet% NumAngles) )
 
       iRef% ReflAngle(:) = -1
-      ! duplicate on device:
-      iRef% d_ReflAngle(:) = -1
-
     enddo
 
     return
@@ -271,7 +263,6 @@ contains
       iRef    => self% iRef(set)
                                                                                                    
       deallocate( iRef% ReflAngle )
-      deallocate( iRef% d_ReflAngle )
     enddo
                                                                                                    
     return
@@ -331,9 +322,6 @@ contains
     set  =  QuadSet% QuadID
     iRef => self% iRef(set)                                                                                                 
     iRef% ReflAngle(IncAngle) = ReflAngle
-    ! set this value on the device too.
-    iRef% d_ReflAngle(IncAngle) = ReflAngle
-    
                                                                                                    
     return
                                                                                                    
@@ -475,8 +463,6 @@ contains
 !   Local
 
     deallocate( self % BdyToC )
-    deallocate( self % d_BdyToC )
-
     deallocate( self % A_bdy  )
     deallocate( self % Radius )
 

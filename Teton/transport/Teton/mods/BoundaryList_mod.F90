@@ -27,8 +27,7 @@ module BoundaryList_mod
      integer                 :: PtrSrc             ! points to source boundary
      integer                 :: PtrShared          ! points to shared boundary
 
-     type(Boundary),         pointer :: iBoundary(:)       ! boundary flux pointers
-     !type(Boundary), device, pointer :: d_iBoundary(:)       ! boundary flux pointers
+     type(Boundary), pointer :: iBoundary(:)       ! boundary flux pointers
 
   end type BoundaryList
 

@@ -9,9 +9,9 @@
 !        energy/photon energy/temperature/mass/length/area/volume/time *
 !***********************************************************************
 
-   subroutine rtmainsn(dtrad, PSIR, PHI, psib, angleLoopTime)
+   subroutine rtmainsn(dtrad, PSIR, PHI, angleLoopTime)
 
-   use, intrinsic :: iso_c_binding
+   use, intrinsic :: iso_c_binding <- needed for Pinning memory in fortran
    use kind_mod
    use iter_control_list_mod
    use iter_control_mod
@@ -21,28 +21,26 @@
    use Quadrature_mod
    use constant_mod
    use radconstant_mod
-   use cudafor
-   use GPUhelper_mod
-
-!!#include "cudaProfiler.h"
+   use cudafor <- needed
+   use GPUhelper_mod <- added, has some useful stuff like whether you fit in
+GPU, which batch you're on..
 
    implicit none
-   
 
 !  Arguments
 
    real(adqt), intent(in)    :: dtrad
 
-   real(adqt), intent(inout) :: psib(Size%ngr,Size%nbelem,Size%nangSN), &
-                                psir(Size%ngr,Size%ncornr,Size%nangSN), &
+   real(adqt), intent(inout) :: psir(Size%ngr,Size%ncornr,Size%nangSN), & <- not
+sure why psir, not psi
                                 Phi(Size%ngr,Size%ncornr), angleLoopTime
 
 !  Local
 
    integer    :: NumSnSets
 
-   integer    :: noutrt, ninrt, intensityIter, izero
-
+   integer    :: noutrt, ninrt, intensityIter, izero, istat
+   integer    :: nbelem, ngr, nangSN
    integer    :: set, NumQuadSets, NumBin
 
    real(adqt) :: maxEnergyDensityError, maxTempError 
@@ -50,7 +48,12 @@
    integer :: mm1, buffer
 
 !  Dynamic Arrays
+ 
+!  Photon Intensities on the problem boundary
 
+   real(adqt), pinned, allocatable, save :: psib(:,:,:) <- psib, boundary data,
+can put pinned right here. save is like static in c.  Need cudafor for 'pinned'
+attribute.
 
 #ifdef PROFILING_ON
    integer profiler(2) / 0, 0 /
@@ -66,9 +69,11 @@
    call TAU_PROFILE_START(profiler)
 #endif
 
-   ! start cuda profiler
-   call cudaProfilerStart()
+!  Set some scalars used for dimensioning
 
+   nbelem   = Size%nbelem
+   ngr      = Size%ngr
+   nangSN   = Size%nangSN
 
    NumSnSets = getNumSnSets(Quad)
 
@@ -89,6 +94,41 @@
    call setControls(incidentFluxControl,maxNumberOfIterations=2)
    call setGlobalError(temperatureControl,0.1d0)
 
+!***********************************************************************
+!                                                                      *
+!     ALLOCATE MEMORY                                                  *
+!                                                                      *
+!***********************************************************************
+ 
+!  Photon Intensities on the problem boundary
+
+   if (.not. allocated(psib) ) then
+     allocate( psib(ngr,nbelem,nangSN) ) <- fortran allocatables, can check if
+allocated. < - assuming pinned worked.  slides page 4 has some info on how to
+check if item is pinned.
+     print *, "sizeof(psib): ", sizeof(psib)
+
+     print *, "pinning psir" 
+     !istat = cudaHostRegister(C_LOC(psir(1,1,1)), sizeof(psir), cudaHostRegisterMapped)
+     istat = cudaHostRegister(C_LOC(psir(1,1,1)), int(Size%ngr,KIND=8)&
+          *int(Size%ncornr,KIND=8)&
+          *int(Size%nangSN,KIND=8)*8, cudaHostRegisterMapped)
+     print *, "size of psir: ", sizeof(psir)
+     print *, "dimensions of psir: ", Size%ngr,Size%ncornr,Size%nangSN
+     print *, "Correct size used is:", int(Size%ngr,KIND=8)&
+          *int(Size%ncornr,KIND=8)&
+          *int(Size%nangSN,KIND=8)*8
+     if(istat .ne. 0) then
+        print *, "pinning error, istat = ", istat , LOC(psir(1,1,1))
+        !print *, cudaGetErrorString(istat)
+     endif
+
+
+     print *, "pinning phi, sizeof(phi) = ", sizeof(phi)
+     istat = cudaHostRegister(C_LOC(phi(1,1)), sizeof(phi), cudaHostRegisterMapped)
+   endif
+
+<- CHeck where above is allocated, can we just pin at start?
 
 !***********************************************************************
 !     SWEEP ORDER                                                      *
@@ -97,17 +137,13 @@
 !  Find reflected angles on all reflecting boundaries 
 
    call timer_beg('reflect')
-   call nvtxStartRange("reflect",6)
    call findReflectedAngles
-   call nvtxEndRange
    call timer_end('reflect')
 
 !  Calculate ordering for grid sweeps
 
    call timer_beg('rtorder')
-   call nvtxStartRange("rtorder",5)
    call rtorder 
-   call nvtxEndRange
    call timer_end('rtorder')
 
 !***********************************************************************
@@ -118,30 +154,6 @@
 
    call findexit
 
-
-!  Establish angle order for transport sweeps
-   ! once angle order is established, could move in psi(first_angle)
-
-   call timer_beg('scheduler')
-   call nvtxStartRange("scheduler",7)
-   call SweepScheduler
-   call nvtxEndRange
-   call timer_end('scheduler')
-
-!***********************************************************************
-!     SAVE ZONE AVERAGE TEMPERATURES FOR TIME STEP CALCULATION         *
-!*********************************************************************** 
-
-   call timer_beg('advanceRT')
-   call nvtxStartRange("advanceRT",5)
-   ! calls snmoments to consume psir, produce phi
-   ! scales psi (and phi too).
-   call advanceRT(dtrad, PSIR, PHI, psib)
-   call nvtxEndRange
-   call timer_end('advanceRT')
-
-
-
 !***********************************************************************
 !     SAVE PREVIOUS CYCLE INFORMATION AND BEGIN MATERIAL COUPLING      *
 !***********************************************************************
@@ -150,18 +162,18 @@
 !  the time-dependent source
 
 
+
+   ! psir is expected to have already been scaled by the volume here...
+
+
+
    call timer_beg('rtstrtsn')
-   ! in: psir, phi
-   ! out: psib from set boundary
-   ! removed psir and psib touching routines to advanceRT.
-   call rtstrtsn( Phi )
+   call rtstrtsn(psir, Phi, PSIB)
    call timer_end('rtstrtsn')
 
 !  Energy Change due to Compton scattering
 
    call timer_beg('compton')
-   ! in: Phi (not even used in UMT)
-   ! out: nothing
    call rtcompton(Phi) 
    call timer_end('compton')
 
@@ -169,40 +181,26 @@
 !     EXCHANGE BOUNDARY FLUXES                                         *
 !***********************************************************************
 
+!  Establish angle order for transport sweeps
+
+   call timer_beg('scheduler')
+   call SweepScheduler
+   call timer_end('scheduler')
 
 !  Initialize Absorption Rate
 
    call timer_beg('absorbrate')
-   call nvtxStartRange("absorbrate")
-   ! in: Phi
-   ! out: absorbrate (1 value per corner)
    call getAbsorptionRate(Phi) 
-   call nvtxEndRange
    call timer_end('absorbrate')
 
    call timer_beg('material')
-   call nvtxStartRange("material")
    call UpdateMaterialCoupling(dtrad)
-   call nvtxEndRange
    call timer_end('material')
 
 !***********************************************************************
 !     BEGIN IMPLICIT ELECTRON/RADIATION COUPLING ITERATION (OUTER)     *
 !***********************************************************************
-
-   ! ! debugging optimized code:                                                
-
-   ! print *, "psib before starting sweeps: ", psib(1,1,1), psib(1,1,Size%nangSN)
-
-   ! print *, "phi before starting sweeps: ", phi(1,1), phi(1,Size%ncornr)
-
-   ! print *, "STime before starting sweeps: ", Geom%ZDataSoA%STime(1,1,1), Geom%ZDataSoA%STime(1,1,Size%nangSN)
  
-
-   ! print *, "d_psi(1)%owner = ", d_psi(1)%owner, "d_psi(2)%owner = ", d_psi(2)%owner
-
-   ! print *, "d_STime(1)%owner = ", d_STime(1)%owner, "d_STime(2)%owner = ", d_STime(2)%owner
-
    noutrt = 0
    ninrt  = 0
  
@@ -214,8 +212,6 @@
 !     BEGIN PHOTON INTENSITY ITERATION (INNER)                         *
 !***********************************************************************
 
-! it looks like only 1 inner per outer for SuOlson, i.e. this loop is not a loop.
-
      intensityIter = 0
  
      IntensityIteration: do
@@ -223,7 +219,7 @@
        intensityIter = intensityIter + 1
  
 !***********************************************************************
-!     BEGIN LOOP OVER BATCHES (meaning batches of quadsets here)       *
+!     BEGIN LOOP OVER BATCHES                                          *
 !***********************************************************************
  
        GroupSetLoop: do set=1,NumSnSets
@@ -231,23 +227,15 @@
          QuadSet => getQuadrature(Quad, set)
 
 !  Sweep all angles in all groups in this "batch"
-
  
-         ! CPU code should wait until psib is on the host before exchanging.
-         istat=cudaEventSynchronize( psib_OnHost( current%batch ) )
-
          call timer_beg('exch')
-         call nvtxStartRange("exch all bins")
          call InitExchange
-         ! exchange over all angle bins. Maybe could be done a bin at at time, overlapped with advanceRT.
-         call exchange(PSIB, izero, izero) 
-         call nvtxEndRange
+         call exchange(PSIB, izero, izero) ! This exchange could be pushed into snflw after volume scaling
          call timer_end('exch')
 
+<- start the sweep now
          call timer_beg('rswpmd')
-         call nvtxStartRange("rswpmd",2)
          call rswpmd(PSIB, PSIR, PHI, angleLoopTime, intensityIter, noutrt)
-         call nvtxEndRange
          call timer_end('rswpmd')
 
        enddo GroupSetLoop
@@ -261,11 +249,7 @@
        Mat%AbsorptionRateOld(:) = Mat%AbsorptionRate(:)
 
        call timer_beg('absorbrate')
-       call nvtxStartRange("getAbsorptionRate")
-       ! in: Phi
-       ! out: absorbrate (1 value per corner)
        call getAbsorptionRate(Phi)
-       call nvtxEndRange
        call timer_end('absorbrate')
 
 !***********************************************************************
@@ -273,9 +257,7 @@
 !***********************************************************************
 
        call timer_beg('rtconi')
-       call nvtxStartRange("rtconi")
        call rtconi(maxEnergyDensityError, Phi)
-       call nvtxEndRange
        call timer_end('rtconi')
  
        if (maxEnergyDensityError < getEpsilonPoint(intensityControl) .or. &
@@ -296,17 +278,13 @@
 !  Calculate new electron temperature and energy change
  
      call timer_beg('material')
-     call nvtxStartRange("material")
      call UpdateMaterialCoupling(dtrad)
-     call nvtxEndRange
      call timer_end('material')
 
 !  Check convergence of electron temperature
  
      call timer_beg('rtconv')
-     call nvtxStartRange("rtconv")
      call rtconv(maxTempError) 
-     call nvtxEndRange
      call timer_end('rtconv')
 
      if ((maxTempError <  getEpsilonPoint(temperatureControl) .and.  &
@@ -329,35 +307,33 @@
  
    enddo TemperatureIteration
 
-   ! don't need to move psi back to host now, because I will port the routines that use psi.
 
+   ! Here is where psi should be moved back to the host (only at the end of each timestep).
+   if( fitsOnGPU ) then 
+      mm1 = 1
+      ! Copy d_psi to host psi.
+      do buffer=1, QuadSet% NumBin0 
+         binSend(buffer) = QuadSet% SendOrder0(buffer)
+         !print *, "QuadSet% NumBin = ", QuadSet% NumBin
+         !print *, "binSend(buffer) = ", binSend(buffer)
+         !print *, "mm1 = ", mm1
+         !print *, "buffer = ", buffer
+         !print *, "anglebatch(buffer) = ", anglebatch(buffer)
+         istat=cudaMemcpyAsync(psir(1,1,QuadSet%AngleOrder(mm1,binSend(buffer))), &
+              d_psi(buffer)%data(1,1,1), &
+              QuadSet%Groups*Size%ncornr*batchsize, 0 )
 
-   ! ! Here is where psi should be moved back to the host (only at the end of each timestep).
-   ! if( fitsOnGPU ) then 
-   !    mm1 = 1
-   !    ! Copy d_psi to host psi.
-   !    do buffer=1, QuadSet% NumBin0 
-   !       binSend(buffer) = QuadSet% SendOrder0(buffer)
-   !       !print *, "QuadSet% NumBin = ", QuadSet% NumBin
-   !       !print *, "binSend(buffer) = ", binSend(buffer)
-   !       !print *, "mm1 = ", mm1
-   !       !print *, "buffer = ", buffer
-   !       !print *, "anglebatch(buffer) = ", anglebatch(buffer)
-   !       istat=cudaMemcpyAsync(psir(1,1,QuadSet%AngleOrder(mm1,binSend(buffer))), &
-   !            d_psi(buffer)%data(1,1,1), &
-   !            QuadSet%Groups*Size%ncornr*batchsize, 0 )
+         ! THIS WAS THE FIX!!!
+         istat = cudaDeviceSynchronize()
 
-   !       ! THIS WAS THE FIX!!!
-   !       istat = cudaDeviceSynchronize()
+         ! mark the data as un-owned since host will change it, making device version stale:
+         d_psi(buffer)% owner = 0
+         ! CHECKME: STime may be marked as stale more often than necessary.
+         !d_STime(buffer)% owner = 0
 
-   !       ! mark the data as un-owned since host will change it, making device version stale:
-   !       d_psi(buffer)% owner = 0
-   !       ! CHECKME: STime may be marked as stale more often than necessary.
-   !       !d_STime(buffer)% owner = 0
+      enddo
 
-   !    enddo
-
-   ! endif ! if not fits on GPU, it will have already been moved back.
+   endif ! if not fits on GPU, it will have already been moved back.
 
 
 !  Update Iteration Counts
@@ -375,10 +351,7 @@
 !***********************************************************************
 
    call timer_beg('bdyedt')
-   call nvtxStartRange("bdyedt")
-   ! in: psib
    call bdyedt(psib)
-   call nvtxEndRange
    call timer_end('bdyedt')
 
 !***********************************************************************
@@ -401,8 +374,6 @@
      call destructExitList(QuadSet)
    enddo
 
-
-   call cudaProfilerStop()
 
 #ifdef PROFILING_ON
    call TAU_PROFILE_STOP(profiler)

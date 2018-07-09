@@ -122,6 +122,7 @@
    Groups = QuadSet% Groups
    ncornr = Size% ncornr
 
+<-- Kernel is actually here
    !$cuf kernel do(2) <<< (*,*), (16,16), stream=streamid >>>
    do ic=1,ncornr
      do ig=1,Groups

@@ -1,6 +1,6 @@
 VERSION = 2.0c
 
-include make.defs
+include make.defs.xlcuf
 include distfiles.txt
 
 ifeq ($(STATIC_LINK),on)

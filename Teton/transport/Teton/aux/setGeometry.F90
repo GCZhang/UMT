@@ -60,10 +60,6 @@
        Bdy% BdyToC(ib) = BdyToC(b0+ib)
      enddo
 
-     ! NEEDS TO BE DONE ASYNC!
-     ! propagate this to the device version:
-     Bdy%d_BdyToC = Bdy%BdyToC
-
    enddo
 
 

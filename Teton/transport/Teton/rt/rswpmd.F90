@@ -42,7 +42,7 @@
    parameter (ipath='sweep')
 
 !  Add Scattering Source to total
-   !$omp parallel do private(Z,nCorner,c0,c)
+
    do zone=1,Size%nzones
      Z => getZoneData(Geom, zone)
      nCorner   = Z% nCorner
@@ -52,9 +52,9 @@
      enddo
    enddo
 
-!  Update device-memory copies of STotal, sigt, sigtinv
-
-   call setZones_GPU_STotal(Geom%d_GPU_ZData, Geom%d_ZData)
+!  Update device-memory SoA copies of zone data
+<-- Need this zone information to do sweep. Maybe not all of it.
+   call setZones_SoA(Geom%d_ZDataSoA, Geom%d_ZData)
 
 !  Follow particles through the mesh:
 
